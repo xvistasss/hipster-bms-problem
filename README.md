@@ -1,70 +1,98 @@
-# Getting Started with Create React App
+# Spa & Wellness Booking Management Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Overview
 
-## Available Scripts
+This project is a frontend Single Page Application built using React (Create React App) for managing spa and wellness bookings across therapist schedules.
 
-In the project directory, you can run:
+The implementation focuses on building a responsive therapist booking board capable of handling large booking volumes while maintaining clean component architecture and efficient rendering.
 
-### `npm start`
+## Tech Stack
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+* React 19 (Create React App)
+* Zustand for state management
+* React Hook Form for form handling
+* Tailwind CSS for styling
+* react-window for calendar virtualization
+* dnd-kit for drag interaction foundation
+* date-fns for date utilities
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Architecture Overview
 
-### `npm test`
+The project follows a modular frontend structure:
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+* `components/` for reusable UI modules
+* `hooks/` for derived state and reusable logic
+* `store/` for Zustand state containers
+* `services/` for demo backend abstraction and logging
+* `utils/` for reusable scheduling helpers
+* `pages/` for screen-level composition
 
-### `npm run build`
+The dashboard composes:
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+* Search
+* Booking creation form
+* Calendar board
+* Booking details side panel
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## State Management Strategy
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Zustand is used to separate:
 
-### `npm run eject`
+* booking domain state (bookings, selection, loading, errors)
+* UI state (search term and transient UI state)
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+This avoids heavy prop drilling and keeps updates localized.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Performance Strategy
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+Performance optimizations currently implemented:
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+* Debounced search filtering
+* Memoized visible booking derivation
+* React.memo for booking blocks and therapist columns
+* Lazy loading for booking side panel
+* Horizontal therapist virtualization using react-window Grid
 
-## Learn More
+The calendar currently virtualizes therapist columns to reduce DOM load under large therapist counts.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## Current Functional Coverage
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+Implemented features:
 
-### Code Splitting
+* Fetch bookings (demo service)
+* Display bookings on therapist calendar
+* Search bookings
+* Create booking
+* Edit booking
+* Cancel booking
+* Booking detail side panel
+* Basic drag interaction foundation
+* Booking conflict utility for future scheduling validation
+* Error boundary fallback UI
+* Structured logging for booking actions and API failures
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## Error Handling
 
-### Analyzing the Bundle Size
+The application includes:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+* UI error boundary for render failures
+* Local error handling in booking actions
+* Logging for user actions and API errors
 
-### Making a Progressive Web App
+## Assumptions
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+* Backend API layer is currently represented through demo service abstraction and can be replaced with provided APIs.
+* Therapist virtualization is prioritized first for assignment-scale rendering.
+* Drag interaction foundation is implemented; full rescheduling conflict enforcement can be extended further.
 
-### Advanced Configuration
+## Notes
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+The implementation intentionally avoids unnecessary abstraction and keeps the codebase assignment-focused, with emphasis on readable structure, extensibility, and stable performance.
 
-### Deployment
+## Run Locally
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+npm install  
+npm start
 
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## Building prodcution app
+npm run build
