@@ -23,7 +23,7 @@ The project follows a modular frontend structure:
 * `components/` for reusable UI modules
 * `hooks/` for derived state and reusable logic
 * `store/` for Zustand state containers
-* `services/` for demo backend abstraction and logging
+* `services/` for backend abstraction and logging
 * `utils/` for reusable scheduling helpers
 * `pages/` for screen-level composition
 
@@ -59,7 +59,7 @@ The calendar currently virtualizes therapist columns to reduce DOM load under la
 
 Implemented features:
 
-* Fetch bookings (demo service)
+* Fetch bookings (booking service)
 * Display bookings on therapist calendar
 * Search bookings
 * Create booking
@@ -81,7 +81,7 @@ The application includes:
 
 ## Assumptions
 
-* Backend API layer is currently represented through demo service abstraction and can be replaced with provided APIs.
+* Backend API layer is currently represented through booking service abstraction with provided APIs.
 * Therapist virtualization is prioritized first for assignment-scale rendering.
 * Drag interaction foundation is implemented; full rescheduling conflict enforcement can be extended further.
 

@@ -1,75 +1,153 @@
 // Purpose:
-// - Simulate booking fetch/create/update/delete
+// - Abstract booking fetch/create/update/delete
 // - Keep component layer independent from backend implementation
-// - Allow optimistic UI testing now
 
-import { addMinutes, setHours, setMinutes } from 'date-fns';
+import { api } from './api';
+import { loggerService } from './loggerServices';
+import { THERAPISTS } from '../constants/therapistList';
 
-const therapists = Array.from({ length: 12 }, (_, index) => ({
-  id: `therapist-${index + 1}`,
-  name: `Therapist ${index + 1}`,
-  gender: index % 2 === 0 ? 'female' : 'male',
-}));
+import { buildReschedulePayload } from '../utils/bookingPayload';
+import { normalizeBooking } from '../utils/normalizeBooking';
+import { createTherapistMap } from '../utils/createTherapistMap';
 
-const generateBookings = () => {
-  return Array.from({ length: 50 }, (_, index) => {
-    const base = setMinutes(setHours(new Date(), 9), 0);
-    const start = addMinutes(base, index * 15);
+const therapistMap = createTherapistMap();
 
-    return {
-      id: `booking-${index + 1}`,
-      clientName: `Client ${index + 1}`,
-      therapistId: therapists[index % therapists.length].id,
-      therapistName: therapists[index % therapists.length].name,
-      therapistGender: therapists[index % therapists.length].gender,
-      startTime: start.toISOString(),
-      duration: 45,
-      service: 'Massage',
-      status: 'BOOKED',
-      requestTherapist: index % 3 === 0,
-      requestRoom: index % 4 === 0,
-    };
+const handleError = (error, action) => {
+  loggerService.error('BOOKING_SERVICE_ERROR', {
+    action,
+    message: error.message,
+    status: error.response?.status,
+    endpoint: error.config?.url,
   });
+
+  throw error;
 };
 
-let bookings = generateBookings();
+const getFallbackTherapist = (therapistId) =>
+  THERAPISTS.find(
+    (t) =>
+      t.id === therapistId ||
+      String(t.id) === String(therapistId)
+  ) || THERAPISTS[0];
+
 export const bookingService = {
-  fetchBookings: async () => {
-    return new Promise((resolve) => {
-      setTimeout(() => resolve([...bookings]), 400);
-    });
+  createBooking: async (booking) => {
+    try {
+      const response = await api.post('bookings/create', booking);
+      const savedBooking = response.data?.data || response.data;
+
+      return normalizeBooking(savedBooking, therapistMap, getFallbackTherapist(booking.therapistId));
+    } catch (error) {
+      handleError(error, 'createBooking');
+    }
   },
 
-  createBooking: async (booking) => {
-    const newBooking = {
-      ...booking,
-      id: `booking-${Date.now()}`,
-    };
+  fetchBookings: async (date) => {
+    try {
+      const firstResponse = await api.get('bookings?pagination=1&page=1', {
+        params: date ? { date } : {},
+      });
+      const firstPageData =
+        firstResponse.data?.data?.data?.list?.bookings || [];
+      const paginationMeta =
+        firstResponse.data?.data?.data?.list?.pagination || {};
+      const totalPages = paginationMeta.lastPage || 1;
 
-    bookings.push(newBooking);
+      const remainingRequests = [];
+      for (let page = 2; page <= totalPages; page += 1) {
+        remainingRequests.push(
+          api.get(`bookings?pagination=1&page=${page}`)
+        );
+      }
 
-    return new Promise((resolve) => {
-      setTimeout(() => resolve(newBooking), 300);
-    });
+      const remainingResponses = await Promise.all(remainingRequests);
+      const remainingBookings = remainingResponses.flatMap(
+        (response) =>
+          response.data?.data?.data?.list?.bookings || []
+      );
+
+      const allBookings = [
+        ...firstPageData,
+        ...remainingBookings,
+      ];
+
+      const normalizedBookings = allBookings.map((booking, index) => {
+        const fallbackTherapist = THERAPISTS[index % THERAPISTS.length];
+
+        return normalizeBooking(booking, therapistMap, fallbackTherapist);
+      });
+
+      return normalizedBookings;
+    } catch (error) {
+      handleError(error, 'fetchBookings');
+      return [];
+    }
+  },
+
+  showDetails: async (bookingId) => {
+    try {
+      const response = await api.get(`bookings/${bookingId}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'showDetails');
+    }
   },
 
   updateBooking: async (updatedBooking) => {
-    bookings = bookings.map((booking) =>
-      booking.id === updatedBooking.id ? updatedBooking : booking
-    );
+    try {
+      const response = await api.put(`bookings/${updatedBooking.id}`, updatedBooking);
+      const savedBooking = response.data?.data || response.data;
 
-    return new Promise((resolve) => {
-      setTimeout(() => resolve(updatedBooking), 300);
-    });
+      return normalizeBooking(savedBooking, therapistMap, getFallbackTherapist(updatedBooking.therapistId));
+    } catch (error) {
+      handleError(error, 'updateBooking');
+    }
+  },
+
+  rescheduleBooking: async (booking) => {
+    try {
+      const formData = buildReschedulePayload(booking);
+
+      if (!formData) {
+        throw new Error('Invalid booking payload');
+      }
+
+      const response = await api.post(
+        '/bookings/item/reschedule',
+        formData
+      );
+      const savedBooking = response.data?.data || booking;
+
+      return normalizeBooking(savedBooking, therapistMap, getFallbackTherapist(booking.therapistId));
+    } catch (error) {
+      handleError(error, 'rescheduleBooking');
+    }
+  },
+
+  updatePaymentStatus: async (data) => {
+    try {
+      const response = await api.post('bookings/item/payment-status', data);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'updatePaymentStatus');
+    }
+  },
+
+  cancelBooking: async (data) => {
+    try {
+      const response = await api.post('bookings/item/cancel', data);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'cancelBooking');
+    }
   },
 
   deleteBooking: async (bookingId) => {
-    bookings = bookings.filter((booking) => booking.id !== bookingId);
-
-    return new Promise((resolve) => {
-      setTimeout(() => resolve(bookingId), 300);
-    });
+    try {
+      await api.delete(`bookings/destroy/${bookingId}`);
+      return bookingId;
+    } catch (error) {
+      handleError(error, 'deleteBooking');
+    }
   },
-
-  getTherapists: () => therapists,
 };

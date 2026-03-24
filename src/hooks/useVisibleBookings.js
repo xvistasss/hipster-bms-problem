@@ -1,36 +1,39 @@
-// Derived booking selector hook.
+// Derived visible booking selector.
 // Responsibilities:
-// - Read bookings from booking store
-// - Read search term from UI store
-// - Apply debounced filtering
-// - Keep filtering outside render components
+// - Read bookings from props
+// - Apply debounced search filtering
+// - Return stable visible booking list
 
 import { useMemo } from 'react';
-import { useBookingStore } from '../store/bookingStore';
-import { useUIStore } from '../store/uiStore';
 import { useDebounce } from './useDebounce';
+import { useUIStore } from '../store/uiStore';
 
-export const useVisibleBookings = () => {
-  const bookingIds = useBookingStore((state) => state.bookingIds);
-  const bookingsById = useBookingStore((state) => state.bookingsById);
+export const useVisibleBookings = (bookings) => {
   const searchTerm = useUIStore((state) => state.searchTerm);
-
   const debouncedSearch = useDebounce(searchTerm, 300);
 
-  return useMemo(() => {
-    const allBookings = bookingIds.map((id) => bookingsById[id]);
+  const visibleBookings = useMemo(() => {
+    const normalizedSearch = debouncedSearch.trim().toLowerCase();
 
-    if (!debouncedSearch.trim()) {
-      return allBookings;
+    if (!normalizedSearch) {
+      return bookings;
     }
 
-    const lowerSearch = debouncedSearch.toLowerCase();
+    return bookings.filter((booking) => {
+      const clientName = booking.clientName.toLowerCase();
+      const service = booking.service.toLowerCase();
+      const therapistName = booking.therapistName.toLowerCase();
 
-    return allBookings.filter((booking) => {
       return (
-        booking.clientName.toLowerCase().includes(lowerSearch) ||
-        booking.service.toLowerCase().includes(lowerSearch)
+        clientName.includes(normalizedSearch) ||
+        service.includes(normalizedSearch) ||
+        therapistName.includes(normalizedSearch)
       );
     });
-  }, [bookingIds, bookingsById, debouncedSearch]);
+  }, [bookings, debouncedSearch]);
+
+  return {
+    visibleBookings,
+    isFiltering: Boolean(debouncedSearch.trim()),
+  };
 };

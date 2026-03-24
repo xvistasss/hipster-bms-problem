@@ -5,6 +5,7 @@
 // - Show simple fallback UI
 
 import React from 'react';
+import { loggerService } from '../../services/loggerServices';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -21,20 +22,37 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, info) {
-    console.error('UI Error:', error, info);
+    loggerService.error('UI_ERROR_BOUNDARY', {
+      name: error.name,
+      error: error.message,
+      componentStack: info.componentStack,
+    });
   }
+
+  handleRetry = () => {
+    this.setState({ hasError: false });
+  };
 
   render() {
     if (this.state.hasError) {
       return (
         <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
-          <div className="rounded-lg border border-red-200 bg-white p-6 text-center shadow-sm">
+          <div className="rounded-lg border border-red-200 bg-white p-6 text-center shadow-sm max-w-sm w-full">
             <h2 className="text-lg font-semibold text-red-600">
               Something went wrong
             </h2>
+
             <p className="mt-2 text-sm text-gray-600">
-              Please refresh the page and try again.
+              An unexpected error occurred while rendering the page.
             </p>
+
+            <button
+              type="button"
+              onClick={this.handleRetry}
+              className="mt-4 rounded-md bg-red-500 px-4 py-2 text-sm font-medium text-white hover:bg-red-600"
+            >
+              Retry
+            </button>
           </div>
         </div>
       );

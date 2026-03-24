@@ -1,46 +1,52 @@
-// Converts booking time values into calendar pixel coordinates.
-// Used by booking blocks, drag/drop calculations, and conflict checks.
-// Pure utility file: no UI logic here.
+// Booking block positioning utility.
+// Responsibilities:
+// - Convert booking start time into vertical pixel position
+// - Respect visible calendar operating hours
+// - Keep sizing reusable across booking rendering
 
-import { parseISO, differenceInMinutes, startOfDay } from 'date-fns';
-
-// Visual scale used across calendar rendering.
-// 1 minute = 2 pixels keeps 15-minute slots visually clear.
-export const PIXELS_PER_MINUTE = 2;
-
-// Each therapist column width can be reused in layout calculations.
-export const THERAPIST_COLUMN_WIDTH = 180;
+import { differenceInMinutes, parseISO, set } from 'date-fns';
+import {
+  CALENDAR_START_HOUR,
+  PIXELS_PER_MINUTE,
+} from '../constants/calendarConfig';
 
 /**
- * Convert booking start time into vertical top position.
- * @param {string} startTime - ISO booking start time
- * @returns {number} pixel top position
+ * Returns booking block style for absolute positioning inside therapist column.
  */
-export const getBookingTop = (startTime) => {
-  const bookingDate = parseISO(startTime);
-  const dayStart = startOfDay(bookingDate);
+export const getBookingStyle = (booking) => {
+  const rawServiceAt = booking.service_at || '';
+  const serviceDate = rawServiceAt.split(/[ T]/)[0];
 
-  const minutesFromStart = differenceInMinutes(bookingDate, dayStart);
+  const startTime = booking.start_time || '00:00:00';
+  const bookingStart = parseISO(`${serviceDate}T${startTime}`);
 
-  return minutesFromStart * PIXELS_PER_MINUTE;
+  const rawDuration = booking.duration ?? 60;
+  const normalizedDuration =
+    rawDuration > 300
+      ? Math.round(rawDuration / 60)
+      : rawDuration;
+
+  if (Number.isNaN(bookingStart.getTime())) {
+    return {
+      top: '0px',
+      height: `${normalizedDuration * PIXELS_PER_MINUTE}px`,
+    };
+  }
+
+  const calendarStart = set(bookingStart, {
+    hours: CALENDAR_START_HOUR,
+    minutes: 0,
+    seconds: 0,
+    milliseconds: 0,
+  });
+
+  const topMinutes = Math.max(
+    0,
+    differenceInMinutes(bookingStart, calendarStart)
+  );
+
+  return {
+    top: `${topMinutes * PIXELS_PER_MINUTE}px`,
+    height: `${normalizedDuration * PIXELS_PER_MINUTE}px`,
+  };
 };
-
-/**
- * Convert booking duration into visual height.
- * @param {number} duration - duration in minutes
- * @returns {number} pixel height
- */
-export const getBookingHeight = (duration) => {
-  return duration * PIXELS_PER_MINUTE;
-};
-
-/**
- * Full reusable booking style object.
- * Useful for inline style placement in booking block.
- * @param {Object} booking
- * @returns {Object}
- */
-export const getBookingStyle = (booking) => ({
-  top: `${getBookingTop(booking.startTime)}px`,
-  height: `${getBookingHeight(booking.duration)}px`,
-});

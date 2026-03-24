@@ -6,19 +6,39 @@ import { create } from 'zustand';
 
 export const useUIStore = create((set) => ({
   sidePanelOpen: false,
-  selectedDate: new Date(),
+  
   searchTerm: '',
-  filters: {
-    therapist: null,
-    status: null,
+  
+  isFilterOpen: false,
+  activeFilters: {
+    gender: null,
+    resources: [],
+    statuses: [],
+    selectedTherapists: [],
+    requestedOnly: false,
+    searchTherapist: '',
+    selectAllTherapists: false,
   },
+
+  selectedDate: new Date(),
 
   openSidePanel: () => set({ sidePanelOpen: true }),
   closeSidePanel: () => set({ sidePanelOpen: false }),
 
-  setSelectedDate: (date) => set({ selectedDate: date }),
-
   setSearchTerm: (term) => set({ searchTerm: term }),
 
-  setFilters: (filters) => set({ filters }),
+  toggleFilter: () =>
+    set((state) => ({
+        isFilterOpen: !state.isFilterOpen,
+    })),
+
+  setActiveFilters: (filters) =>
+    set((state) => ({
+      activeFilters: {
+        ...state.activeFilters,
+        ...filters,
+      },
+    })),
+  
+  setSelectedDate: (date) => set({ selectedDate: date }),
 }));
